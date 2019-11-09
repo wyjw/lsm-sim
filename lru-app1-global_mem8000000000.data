@@ -1,0 +1,2 @@
+app policy global_mem segment_size block_size num_sections num_dsections cleaning_width growth_factor hits accesses hit_rate bytes_cached missed_bytes evicted_bytes evicted_items cleaned_generated_segs cleaned_ext_frag_bytes hits_dram hits_flash writes_flash credit_limit flash_bytes_written dram_size flash_size threshold 
+1 lru 8000000000 0 0 0 0 0 0 177140967 236918330 0.747688 4396253512 0 0 0 0 0 0 0 0 0 0 0 0 0 
