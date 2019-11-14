@@ -1,6 +1,6 @@
 CXX := g++-7
 # CXX := g++
-CXXFLAGS := -std=c++14 -Wall -g -pedantic-errors -Werror -O3 \
+CXXFLAGS := -std=c++14 -Wall -g -pedantic-errors -O3 \
 						-Wno-unused-parameter -Wimplicit-fallthrough=0 -Wextra -Weffc++
 # REPLAY := yes enables a policy that can feed traces to memcached, but it
 # requires libmemcached to be linked in as a result. Only enable it if you
@@ -8,6 +8,7 @@ CXXFLAGS := -std=c++14 -Wall -g -pedantic-errors -Werror -O3 \
 REPLAY ?= no
 
 LDFLAGS := -lcrypto -lssl -lpython2.7
+IFLAGS := -I/usr/include/python2.7
 
 ifeq ($(REPLAY),yes)
 LDFLAGS += -lmemcached 
@@ -25,7 +26,7 @@ all: lsm-sim
 	$(CXX) $(CXXFLAGS) -c $<
 
 lsm-sim: $(OBJS)
-	$(CXX) $(LDFLAGS) -o $@ $^ 
+	$(CXX) $(IFLAGS) -o $@ $^ $(LDFLAGS) 
 
 clean:
 	-rm lsm-sim src/*.o
