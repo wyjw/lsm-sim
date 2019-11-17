@@ -62,7 +62,7 @@ svm_size(0),
 out{}
 {
     maxBlocks = FLASH_GUARD_FLASH_SIZE/FLASH_GUARD_BLOCK_SIZE;
-    
+    /**
     //Initialize SVM Functions
     Py_Initialize();
     PyRun_SimpleString("import sys");
@@ -80,6 +80,7 @@ out{}
     SVMFitFunction = PyObject_GetAttrString(myModule,"FitFunction");
     SVMPredictFunction = PyObject_GetAttrString(myModule,"PredictFunction");
     SVMLoadFitFunction = PyObject_GetAttrString(myModule,"LoadSavedFunction");
+    **/
 }
 
 static uint32_t S_KID=0;
@@ -721,21 +722,23 @@ void flashguard::ColectItemDataAndPredict(const Request *r, bool warmup __attrib
         
         if (Predict)
         {
+            /**
             PyObject* args = PyTuple_Pack(7,PyFloat_FromDouble(dramitem.FirstHitTimePeriod),PyFloat_FromDouble(dramitem.AvgTimeBetweenhits),PyFloat_FromDouble(dramitem.TimeBetweenLastAction),PyFloat_FromDouble(dramitem.MaxTimeBetweenHits),PyFloat_FromDouble(dramitem.AmountOfHitsSinceArrivel),PyInt_FromLong((long)FLASH_GUARD_APP_NUMBER),PyInt_FromLong((long)FLASH_GUARD_TH));
             PyObject* myResult = PyObject_CallObject(SVMPredictFunction, args);
             
             
             //Predict the class labele for test data sample
             dramitem.SVMResult = PyFloat_AsDouble(myResult);
-            if (dramitem.SVMResult)
+            **/
+            if (0.0)
             {
                 kLruAmountOfSVM[item.queueNumber]++;
                 AmountOfSVM_1++;
 		svm_size += item.size;
             }
             
-            Py_XDECREF(args);
-            Py_XDECREF(myResult);
+            // Py_XDECREF(args);
+            // Py_XDECREF(myResult);
         }
         dramitem.LastAction = r->time;
     }
