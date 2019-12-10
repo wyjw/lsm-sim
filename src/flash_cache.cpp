@@ -35,6 +35,23 @@ FlashCache::FlashCache(stats stat) :
 
 FlashCache::~FlashCache() {}
 
+int calculate_latency(const Request* r, bool isDRAM) {
+	if (isDRAM) {
+		if (r->type == r->req_type::GET) {
+			return DRAM_READ;
+		} else if (r->type == r->req_type::SET) {
+			return DRAM_WRITE;
+		}
+	}
+	else {
+		if (r->type == r->req_type::GET) {
+			return FLASH_READ;
+		} else if (r->type == r->req_type::SET) {
+			return FLASH_WRITE;
+		}
+	}
+	
+}
 size_t FlashCache::get_bytes_cached() const {
 	return dramSize + flashSize;
 }
@@ -64,12 +81,15 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 		*/
 		FlashCache::Item& item = searchRKId->second;
 		if (r->size() == item.size) {
-			if (!warmup) {stat.hits++;stat.totalLatency += FLASH_READ;}
+			if (!warmup) {stat.hits++;}
 			globalLru.erase(item.globalLruIt);
 			globalLru.emplace_front(item.kId);
 			item.globalLruIt = globalLru.begin();
 			if (item.isInDram) {
-				if (!warmup) {stat.hits_dram++;stat.totalLatency += DRAM_READ;}
+				if (!warmup) {
+					stat.hits_dram++;
+					stat.totalLatency += calculate_latency(r, true);
+				}
 				dramLru.erase(item.dramLruIt);
 				dramLru.emplace_front(item.kId);
 				item.dramLruIt = dramLru.begin(); 
@@ -83,7 +103,10 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 				dramAdd(p, tmp, item);
 				dram.erase(tmp);		
 			} else {
-				if (!warmup) {stat.hits_flash++;stat.totalLatency += FLASH_READ;}
+				if (!warmup) {
+					stat.hits_flash++;
+					stat.totalLatency += calculate_latency(r, false);
+				}
 			}
 			item.lastAccessInTrace = counter;
 			item.last_accessed = currTime;
@@ -123,12 +146,13 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 	assert(((unsigned int) newItem.size) <= DRAM_SIZE);
 	while (true) {
 		if (newItem.size + dramSize <= DRAM_SIZE) {
+			stat.totalLatency += calculate_latency(r, true);
+
 #ifdef RELATIVE
 			dramAddFirst(newItem);
 #else
 			std::pair<uint32_t, double> p(newItem.kId, INITIAL_CREDIT);
 			dramAdd(p, dram.begin(), newItem);
-			stat.totalLatency += DRAM_WRITE;
 #endif
 			dramLru.emplace_front(newItem.kId);
 			newItem.dramLruIt = dramLru.begin();
@@ -157,6 +181,8 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 			continue;
 		} else {
 			if (flashSize + mfuItem.size <= FLASH_SIZE) {
+				stat.totalLatency += calculate_latency(r, flase);
+
 				mfuItem.isInDram = false;
 				dram.erase(mfuItem.dramLocation);
 				dramLru.erase(mfuItem.dramLruIt);
