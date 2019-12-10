@@ -15,6 +15,10 @@ struct stats {
   /// Policy used for this run.
   std::string policy;
 
+
+  // latency
+  int totalLatency = 0;
+
   /**
    * The set of appids that this policy was fed. Most policies just treat
    * all of the requests as coming from one application. Others like

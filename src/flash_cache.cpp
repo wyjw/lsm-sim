@@ -9,6 +9,12 @@ double K = 1;
 size_t L_FC = 1;
 double P_FC = 0.3;
 
+double DRAM_READ = 1.0;
+double DRAM_WRITE = 2.0;
+double FLASH_READ = 10.0;
+double FLASH_WRITE = 20.0;
+double DISK_READ = 100.0;
+double DISK_WRITE = 200.0;
 // #define COMPARE_TIME
 // #define RELATIVE
 
@@ -63,7 +69,7 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 			globalLru.emplace_front(item.kId);
 			item.globalLruIt = globalLru.begin();
 			if (item.isInDram) {
-				if (!warmup) {stat.hits_dram++;}
+				if (!warmup) {stat.hits_dram++;stat.totalLatency += DRAM_READ;}
 				dramLru.erase(item.dramLruIt);
 				dramLru.emplace_front(item.kId);
 				item.dramLruIt = dramLru.begin(); 
@@ -77,7 +83,7 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 				dramAdd(p, tmp, item);
 				dram.erase(tmp);		
 			} else {
-				if (!warmup) {stat.hits_flash++;}
+				if (!warmup) {stat.hits_flash++;stat.totalLatency += FLASH_READ;}
 			}
 			item.lastAccessInTrace = counter;
 			item.last_accessed = currTime;
@@ -122,6 +128,7 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 #else
 			std::pair<uint32_t, double> p(newItem.kId, INITIAL_CREDIT);
 			dramAdd(p, dram.begin(), newItem);
+			stat.totalLatency += DRAM_WRITE;
 #endif
 			dramLru.emplace_front(newItem.kId);
 			newItem.dramLruIt = dramLru.begin();
@@ -306,6 +313,7 @@ void FlashCache::dump_stats(void) {
 	out << "#bytes written to flash " << stat.flash_bytes_written << std::endl;
 	out << std::endl << std::endl;
 	out << "key,rate" << std::endl;
+	std::cout << "total latency: "<< stat.totalLatency<< std::endl;
 	for (dramIt it = dram.begin(); it != dram.end(); it++) {
 		out << it->first << "," << it->second << std::endl;
 	}
