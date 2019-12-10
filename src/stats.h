@@ -18,6 +18,8 @@ struct stats {
 
   // latency
   int totalLatency = 0;
+  int dramLatency = 0;
+  int flashLatency = 0;
 
   /**
    * The set of appids that this policy was fed. Most policies just treat
