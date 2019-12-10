@@ -9,6 +9,15 @@ double K = 1;
 size_t L_FC = 1;
 double P_FC = 0.3;
 
+double DRAM_READ = 1.0;
+double DRAM_WRITE = 2.0;
+double FLASH_READ = 10.0;
+double FLASH_WRITE = 20.0;
+double DISK_READ = 100.0;
+double DISK_WRITE = 200.0;
+
+double totalLatency = 0;
+
 // #define COMPARE_TIME
 // #define RELATIVE
 
@@ -58,12 +67,12 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 		*/
 		FlashCache::Item& item = searchRKId->second;
 		if (r->size() == item.size) {
-			if (!warmup) {stat.hits++;}
+			if (!warmup) {stat.hits++;totalLatency += FLASH_READ;}
 			globalLru.erase(item.globalLruIt);
 			globalLru.emplace_front(item.kId);
 			item.globalLruIt = globalLru.begin();
 			if (item.isInDram) {
-				if (!warmup) {stat.hits_dram++;}
+				if (!warmup) {stat.hits_dram++;totalLatency += DRAM_READ;}
 				dramLru.erase(item.dramLruIt);
 				dramLru.emplace_front(item.kId);
 				item.dramLruIt = dramLru.begin(); 
@@ -306,6 +315,7 @@ void FlashCache::dump_stats(void) {
 	out << "#bytes written to flash " << stat.flash_bytes_written << std::endl;
 	out << std::endl << std::endl;
 	out << "key,rate" << std::endl;
+	std::cout << "total latency: "<< totalLatency<< std::endl
 	for (dramIt it = dram.begin(); it != dram.end(); it++) {
 		out << it->first << "," << it->second << std::endl;
 	}
