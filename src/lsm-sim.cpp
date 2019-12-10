@@ -46,7 +46,7 @@
 using namespace std::chrono;
 typedef high_resolution_clock hrc;
 
-const char* Policy_names[26] = { "shadowlru"
+const char* Policy_names[25] = { "shadowlru"
                                , "fifo"
                                , "lru"
                                , "slab"
@@ -69,7 +69,6 @@ const char* Policy_names[26] = { "shadowlru"
                                , "ramshield_sel"
                                , "replay"
                                , "flashshield"
-                               , "flashguard"
 							                 , "flashcachelrukclkmachinelearning"
                                , "partitioned_LRU"
                               };
@@ -158,7 +157,6 @@ enum Pol_type
   , RAMSHIELD_FIFO
   , RAMSHIELD_SEL
   , FLASHSHIELD
-  , FLASHGUARD
   , REPLAY
   , FLASHCACHELRUKCLKMACHINELEARNING
   , PARTITIONED_LRU
@@ -309,13 +307,6 @@ int main(int argc, char *argv[])
 	    Policy->dump_stats();
 	    time_hour++;
     }
-    if (args.verbose && ( args.policy_type == FLASHGUARD || args.policy_type == VICTIMCACHE || 
-          args.policy_type == RIPQ ) && time_hour * 3600 < r.time) 
-    {
-      printf ("Dumping stats for FLASHGUARD\n");
-	    Policy->dump_stats();
-	    time_hour++;
-    }
     ++i;
   }
 
@@ -435,11 +426,6 @@ void parse_stdin(Args& args, int argc, char** argv)
           args.policy_type = Pol_type(Pol_type::FLASHSHIELD);
           args.global_mem = DRAM_SIZE + FLASH_SIZE;
         }
-        else if (std::string(optarg) == "flashguard") 
-        {
-          args.policy_type = Pol_type(Pol_type::FLASHGUARD);
-          args.global_mem = DRAM_SIZE + FLASH_SIZE;
-        }
 		    else if (std::string(optarg) == "flashcachelrukclkmachinelearning")
         {
           args.policy_type = Pol_type(Pol_type::FLASHCACHELRUKCLKMACHINELEARNING);
@@ -545,7 +531,6 @@ void parse_stdin(Args& args, int argc, char** argv)
         FLASH_SIZE_FC_KLRU = args.flash_size = atol(optarg);
         FLASH_SIZE_FC_KLRU_CLK = args.flash_size = atol(optarg);
         FLASH_SHILD_FLASH_SIZE = args.flash_size = atol(optarg);
-        FLASH_GUARD_FLASH_SIZE = args.flash_size = atol(optarg);
 		    FLASH_SIZE_FC_KLRU_CLK_ML = args.flash_size = atol(optarg);
         break;
       case 'D':
@@ -553,7 +538,6 @@ void parse_stdin(Args& args, int argc, char** argv)
         DRAM_SIZE_FC_KLRU = args.dram_size = atol(optarg);
         DRAM_SIZE_FC_KLRU_CLK = args.dram_size = atol(optarg);
         FLASH_SHILD_DRAM_SIZE = args.dram_size = atol(optarg);
-        FLASH_GUARD_DRAM_SIZE = args.dram_size = atol(optarg);
 		    DRAM_SIZE_FC_KLRU_CLK_ML = args.dram_size = atol(optarg);
 	      break;
       case 'K':
@@ -767,14 +751,6 @@ std::unique_ptr<Policy> create_Policy(Args& args)
         sts.dram_size = args.dram_size;
         Policy.reset(new flashshield(sts));
         break;
-    case FLASHGUARD:
-        FLASH_GUARD_APP_NUMBER = *std::begin(args.apps);
-        FLASH_GUARD_TH = args.USER_SVM_TH;
-        sts.threshold = args.threshold;
-        sts.flash_size = args.flash_size;
-        sts.dram_size = args.dram_size;
-        Policy.reset(new flashguard(sts));
-        break;
     case REPLAY:
         break;
     case NONE:
@@ -795,4 +771,3 @@ std::unique_ptr<Policy> create_Policy(Args& args)
   }
   return Policy; 
 }
-
