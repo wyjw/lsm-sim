@@ -9,12 +9,10 @@ double K = 1;
 size_t L_FC = 1;
 double P_FC = 0.3;
 
-double DRAM_READ = 1.0;
-double DRAM_WRITE = 2.0;
-double FLASH_READ = 10.0;
-double FLASH_WRITE = 20.0;
-double DISK_READ = 100.0;
-double DISK_WRITE = 200.0;
+double DRAM_READ = 25.0;
+double DRAM_WRITE = 25.0;
+double FLASH_READ = 55.0;
+double FLASH_WRITE = 200.0;
 // #define COMPARE_TIME
 // #define RELATIVE
 
