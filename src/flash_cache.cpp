@@ -68,6 +68,7 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 #endif	
 	
 	auto searchRKId = allObjects.find(r->kid);
+	// item in the system
 	if (searchRKId != allObjects.end()) {
 		/*
 		* The object exists in flashCache system. If the sizes of the 
@@ -77,16 +78,19 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 		* If it is in the cache, one needs as well to update the 
 		* 'flashiness' value and its place in the dram MFU and dram LRU 
 		*/
+
+		// item's place
 		FlashCache::Item& item = searchRKId->second;
+		// current opration is the same as previous one 
 		if (r->size() == item.size) {
 			if (!warmup) {stat.hits++;}
 			globalLru.erase(item.globalLruIt);
 			globalLru.emplace_front(item.kId);
 			item.globalLruIt = globalLru.begin();
+			// update object's location in dram
 			if (item.isInDram) {
 				if (!warmup) {
 					stat.hits_dram++;
-					stat.dramLatency += calculate_latency(r, true);
 				}
 				dramLru.erase(item.dramLruIt);
 				dramLru.emplace_front(item.kId);
@@ -100,7 +104,7 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 				dramIt tmp = item.dramLocation;
 				dramAdd(p, tmp, item);
 				dram.erase(tmp);		
-			} else {
+			} else { // no need to update position if item is in flash
 				if (!warmup) {
 					stat.hits_flash++;
 					stat.flashLatency += calculate_latency(r, false);
@@ -121,6 +125,11 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 				flashSize -= item.size;
 			}	
 			allObjects.erase(item.kId);
+		}
+		if (item.isInDram) {
+			stat.dramLatency += calculate_latency(r, true);
+		} else {
+			stat.flashLatency += calculate_latency(r, false);
 		}
 	}
 	/*
@@ -143,6 +152,7 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 	newItem.lastAccessInTrace = counter;
 	assert(((unsigned int) newItem.size) <= DRAM_SIZE);
 	while (true) {
+		//2.1
 		if (newItem.size + dramSize <= DRAM_SIZE) {
 			stat.dramLatency += calculate_latency(r, true);
 
@@ -161,10 +171,26 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 			dramSize += newItem.size;
 			return PROC_MISS;
 		}
-		uint32_t mfuKid = dram.back().first;
+		// uint32_t mfuKid = dram.back().first;
+		// FlashCache::Item& mfuItem = allObjects[mfuKid];
+		
+		double maxCredit = -1.0;
+		uint32_t maxkId = 0;
+		double counter = 0;
+		for(auto it = dramLru.begin(); it != dramLru.end(); it++) {
+			double lruCredit = -counter;
+			FlashCache::Item item = allObjects[*it];
+			double mfuCredit = std::distance(dram.begin(), item.dramLocation);
+			double totalCredit = lruCredit + mfuCredit;
+			if (totalCredit > maxCredit) {
+				maxCredit = totalCredit;
+				maxkId = *it;
+			}
+			counter += 1.0;
+		}
+		uint32_t mfuKid = maxkId;
 		FlashCache::Item& mfuItem = allObjects[mfuKid];	
 		assert(mfuItem.size > 0);	
-		if (credits < (double) mfuItem.size) {
 			if (!warmup) {stat.credit_limit++;}
 			while (newItem.size + dramSize > DRAM_SIZE) {
 				uint32_t lruKid = dramLru.back();
@@ -178,7 +204,7 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 			}
 			continue;
 		} else {
-			if (flashSize + mfuItem.size <= FLASH_SIZE) {
+			if (flashSize + mfuItem.size <= FLASH_SIZE) {				
 				stat.flashLatency += calculate_latency(r, false);
 
 				mfuItem.isInDram = false;
@@ -239,16 +265,7 @@ void FlashCache::updateDramFlashiness(const double& currTime) {
 
 double FlashCache::hitCredit(const Item& item, const double& currTime) const{
 	double diff;
-#ifdef COMPARE_TIME
-	diff = currTime - item.last_accessed;
-#else
-	assert(currTime == -1);
-	assert(item.lastAccessInTrace < counter);
-	diff = counter - item.lastAccessInTrace;
-#endif
-	assert(diff != 0);
-	double mul = exp(-diff / K);
-	return ((1 - mul) * (L_FC / diff));
+	return 1.0;
 }
 
 void FlashCache::dramAdd(const std::pair<uint32_t, double>& p, 
@@ -338,6 +355,8 @@ void FlashCache::dump_stats(void) {
 	out << std::endl << std::endl;
 	out << "key,rate" << std::endl;
 	std::cout << "flash latency:" << stat.flashLatency << " dram latency: " << stat.dramLatency << " total latency: "<< stat.dramLatency + stat.flashLatency<< std::endl;
+	std::out << "dram hit rate" << stat.hits_dram / stat.accesses <<std::endl;
+	std::out << "flash hit rate" << stat.hits_flash / stat.accesses <<std::endl;
 	for (dramIt it = dram.begin(); it != dram.end(); it++) {
 		out << it->first << "," << it->second << std::endl;
 	}
