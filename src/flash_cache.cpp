@@ -191,6 +191,7 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 		uint32_t mfuKid = maxkId;
 		FlashCache::Item& mfuItem = allObjects[mfuKid];	
 		assert(mfuItem.size > 0);	
+		if (credits < (double) mfuItem.size) {
 			if (!warmup) {stat.credit_limit++;}
 			while (newItem.size + dramSize > DRAM_SIZE) {
 				uint32_t lruKid = dramLru.back();
@@ -355,8 +356,8 @@ void FlashCache::dump_stats(void) {
 	out << std::endl << std::endl;
 	out << "key,rate" << std::endl;
 	std::cout << "flash latency:" << stat.flashLatency << " dram latency: " << stat.dramLatency << " total latency: "<< stat.dramLatency + stat.flashLatency<< std::endl;
-	std::out << "dram hit rate" << stat.hits_dram / stat.accesses <<std::endl;
-	std::out << "flash hit rate" << stat.hits_flash / stat.accesses <<std::endl;
+	std::cout << "dram hit rate" << stat.hits_dram / stat.accesses <<std::endl;
+	std::cout << "flash hit rate" << stat.hits_flash / stat.accesses <<std::endl;
 	for (dramIt it = dram.begin(); it != dram.end(); it++) {
 		out << it->first << "," << it->second << std::endl;
 	}
