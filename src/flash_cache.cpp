@@ -109,7 +109,6 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 			} else { // no need to update position if item is in flash
 				if (!warmup) {
 					stat.hits_flash++;
-					stat.flashLatency += calculate_latency(r, false);
 				}
 			}
 			item.lastAccessInTrace = counter;
@@ -129,9 +128,13 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 			allObjects.erase(item.kId);
 		}
 		if (item.isInDram) {
-			stat.dramLatency += calculate_latency(r, true);
+			if (r->type == r->req_type::GET) {
+				stat.dramLatency += DRAM_READ;
+			}
 		} else {
-			stat.flashLatency += calculate_latency(r, false);
+			if (r->type == r->req_type::GET) {
+				stat.flashLatency += FLASH_READ;
+			}
 		}
 	}
 	/*
@@ -161,7 +164,7 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 #ifdef RELATIVE
 			//dramAddFirst(newItem);
 			std::pair<uint32_t, double> p(newItem.kId, INITIAL_CREDIT);
-                        dramAdd(p, dram.begin(), newItem);
+            dramAdd(p, dram.begin(), newItem);
 #else
 			std::pair<uint32_t, double> p(newItem.kId, INITIAL_CREDIT);
 			dramAdd(p, dram.begin(), newItem);
