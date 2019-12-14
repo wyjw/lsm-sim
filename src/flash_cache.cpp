@@ -13,8 +13,10 @@ double DRAM_READ = 25.0;
 double DRAM_WRITE = 25.0;
 double FLASH_READ = 55.0;
 double FLASH_WRITE = 200.0;
-// #define COMPARE_TIME
-// #define RELATIVE
+double LRU_RATE = 1;
+double MFU_RATE = 1;
+#define COMPARE_TIME
+//#define RELATIVE
 
 FlashCache::FlashCache(stats stat) : 
 	Policy(stat),
@@ -157,7 +159,9 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 			stat.dramLatency += calculate_latency(r, true);
 
 #ifdef RELATIVE
-			dramAddFirst(newItem);
+			//dramAddFirst(newItem);
+			std::pair<uint32_t, double> p(newItem.kId, INITIAL_CREDIT);
+                        dramAdd(p, dram.begin(), newItem);
 #else
 			std::pair<uint32_t, double> p(newItem.kId, INITIAL_CREDIT);
 			dramAdd(p, dram.begin(), newItem);
@@ -171,28 +175,30 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 			dramSize += newItem.size;
 			return PROC_MISS;
 		}
-		// uint32_t mfuKid = dram.back().first;
-		// FlashCache::Item& mfuItem = allObjects[mfuKid];
-		
+//		uint32_t mfuKid = dram.back().first;
+//		FlashCache::Item& mfuItem = allObjects[mfuKid];
+
 		double maxCredit = -1.0;
 		uint32_t maxkId = 0;
 		double counter = 0;
 		for(auto it = dramLru.begin(); it != dramLru.end(); it++) {
-			double lruCredit = -counter;
+			double lruCredit = counter;
 			FlashCache::Item item = allObjects[*it];
 			double mfuCredit = std::distance(dram.begin(), item.dramLocation);
-			double totalCredit = lruCredit + mfuCredit;
-			if (totalCredit > maxCredit) {
+			double totalCredit = LRU_RATE * lruCredit + MFU_RATE * mfuCredit;
+			//std::cout<< lruCredit <<" | " << mfuCredit << " totoa: " << lruCredit + mfuCredit << std::endl;
+			if (totalCredit >= maxCredit) {
 				maxCredit = totalCredit;
 				maxkId = *it;
 			}
 			counter += 1.0;
 		}
 		uint32_t mfuKid = maxkId;
-		FlashCache::Item& mfuItem = allObjects[mfuKid];	
+		FlashCache::Item& mfuItem = allObjects[mfuKid];			
 		assert(mfuItem.size > 0);	
+		/**
 		if (credits < (double) mfuItem.size) {
-			if (!warmup) {stat.credit_limit++;}
+		  if (!warmup) {stat.credit_limit++;}
 			while (newItem.size + dramSize > DRAM_SIZE) {
 				uint32_t lruKid = dramLru.back();
 				FlashCache::Item& lruItem = allObjects[lruKid];
@@ -205,7 +211,8 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 			}
 			continue;
 		} else {
-			if (flashSize + mfuItem.size <= FLASH_SIZE) {				
+		**/
+		    if (flashSize + mfuItem.size <= FLASH_SIZE) {				
 				stat.flashLatency += calculate_latency(r, false);
 
 				mfuItem.isInDram = false;
@@ -237,7 +244,7 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 				}
 				allObjects.erase(globalLruKid);
 			}	
-		}
+		//}
 	}
 	assert(false);	
 	return PROC_MISS;
@@ -265,7 +272,7 @@ void FlashCache::updateDramFlashiness(const double& currTime) {
 
 
 double FlashCache::hitCredit(const Item& item, const double& currTime) const{
-	double diff;
+	//double diff;
 	return 1.0;
 }
 
@@ -356,8 +363,8 @@ void FlashCache::dump_stats(void) {
 	out << std::endl << std::endl;
 	out << "key,rate" << std::endl;
 	std::cout << "flash latency:" << stat.flashLatency << " dram latency: " << stat.dramLatency << " total latency: "<< stat.dramLatency + stat.flashLatency<< std::endl;
-	std::cout << "dram hit rate" << stat.hits_dram / stat.accesses <<std::endl;
-	std::cout << "flash hit rate" << stat.hits_flash / stat.accesses <<std::endl;
+	std::cout << "dram hit rate" << double(stat.hits_dram) / stat.accesses <<std::endl;
+	std::cout << "flash hit rate" << double(stat.hits_flash) / stat.accesses <<std::endl;
 	for (dramIt it = dram.begin(); it != dram.end(); it++) {
 		out << it->first << "," << it->second << std::endl;
 	}
