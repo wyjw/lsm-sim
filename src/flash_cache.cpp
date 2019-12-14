@@ -14,7 +14,7 @@ double DRAM_WRITE = 25.0;
 double FLASH_READ = 55.0;
 double FLASH_WRITE = 200.0;
 double LRU_RATE = 1;
-double MFU_RATE = 1;
+double MFU_RATE = 10;
 #define COMPARE_TIME
 //#define RELATIVE
 
