@@ -41,11 +41,13 @@ protected:
 	};
 
 	std::list< std::pair<uint32_t, double> > dram;
+	
 	std::list<uint32_t> dramLru;
 	std::list<uint32_t> flash;
 	std::list<uint32_t> globalLru;
 
 	std::unordered_map<uint32_t, Item> allObjects;	
+	std::unordered_map<uint32_t,double> frequency;
 	/* 
 	* One can move objects from the DRAM to the flash only if he has enough
 	* credits. Number of current credits should be higher then the object 

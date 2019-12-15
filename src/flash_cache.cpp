@@ -25,6 +25,7 @@ FlashCache::FlashCache(stats stat) :
 	flash(),
 	globalLru(),
 	allObjects(),
+	frequency(),
 	credits(0),
 	lastCreditUpdate(0),
 	dramSize(0),
@@ -100,8 +101,10 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 				std::pair<uint32_t, double> p = *(item.dramLocation);
 #ifdef COMPARE_TIME
 				p.second += hitCredit(item, currTime);
+				frequency[item.kId] = frequency[r->kId] + 1;
 #else
 				p.second += hitCredit(item);
+				frequency[item.kId] = frequency[r->kId] + 1;
 #endif
 				dramIt tmp = item.dramLocation;
 				dramAdd(p, tmp, item);
@@ -187,7 +190,8 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 		for(auto it = dramLru.begin(); it != dramLru.end(); it++) {
 			double lruCredit = counter;
 			FlashCache::Item item = allObjects[*it];
-			double mfuCredit = std::distance(dram.begin(), item.dramLocation);
+			//double mfuCredit = std::distance(dram.begin(), item.dramLocation);
+			double mfuCredit = frequency[r->kid];
 			double totalCredit = LRU_RATE * lruCredit + MFU_RATE * mfuCredit;
 			//std::cout<< lruCredit <<" | " << mfuCredit << " totoa: " << lruCredit + mfuCredit << std::endl;
 			if (totalCredit >= maxCredit) {
@@ -249,6 +253,7 @@ size_t FlashCache::process_request(const Request* r, bool warmup) {
 			}	
 		//}
 	}
+	frequency[r->kId] = 1;
 	assert(false);	
 	return PROC_MISS;
 }
